@@ -1,21 +1,25 @@
-FROM golang:1.22 as builder
-
-ENV GOOS linux
-ENV CGO_ENABLED 0
-
-WORKDIR /app
-
-COPY go.mod go.sum ./
+# Stage 1: Modules caching
+FROM golang:1.22 as modules
+COPY go.mod go.sum /modules/
+WORKDIR /modules
 RUN go mod download
 
-COPY . .
+# Stage 2: Build
+FROM golang:1.22 as builder
+COPY --from=modules /go/pkg /go/pkg
+COPY . /workdir
+WORKDIR /workdir
+# Install playwright cli with right version for later use
+RUN PWGO_VER=$(grep -oE "playwright-go v\S+" /workdir/go.mod | sed 's/playwright-go //g') \
+    && go install github.com/playwright-community/playwright-go/cmd/playwright@${PWGO_VER}
+# Build your app
+RUN GOOS=linux GOARCH=amd64 go build -o /bin/meineschufa-exporter
 
-RUN go build -o meineschufa-exporter
-
-FROM alpine:3.14 as production
-
-RUN apk add --no-cache ca-certificates
-
-COPY --from=builder /app/meineschufa-exporter /bin/meineschufa-exporter
-
-CMD meineschufa-exporter
+# Stage 3: Final
+FROM ubuntu:jammy
+COPY --from=builder /go/bin/playwright /bin/meineschufa-exporter /
+RUN apt-get update && apt-get install -y ca-certificates tzdata \
+    # Install dependencies and all browsers (or specify one)
+    && /playwright install --with-deps \
+    && rm -rf /var/lib/apt/lists/*
+CMD ["/meineschufa-exporter"]
