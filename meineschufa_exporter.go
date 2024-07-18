@@ -70,6 +70,6 @@ func main() {
 				SetTime(time.Now()))
 		}
 
-		time.Sleep(1 * time.Hour)
+		time.Sleep(12 * time.Hour)
 	}
 }

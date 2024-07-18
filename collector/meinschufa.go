@@ -71,7 +71,7 @@ func (a *playrightSchufaApp) GetScore() (*SchufaResponse, error) {
 		return nil, fmt.Errorf("could not goto: %v", err)
 	}
 
-	cookieAcceptButton := page.GetByText("Alles akzeptieren")
+	cookieAcceptButton := page.GetByText("Akzeptieren")
 	if cookieAcceptButton != nil {
 		err := cookieAcceptButton.Click()
 
@@ -201,6 +201,18 @@ func (a *playrightSchufaApp) GetScore() (*SchufaResponse, error) {
 		}
 
 		s.Datalist = append(s.Datalist, result)
+	}
+
+	err = browser.Close()
+
+	if err != nil {
+		fmt.Printf("could not close browser: %v", err)
+	}
+
+	err = pw.Stop()
+
+	if err != nil {
+		fmt.Printf("could not stop playwright: %v", err)
 	}
 
 	return s, nil
